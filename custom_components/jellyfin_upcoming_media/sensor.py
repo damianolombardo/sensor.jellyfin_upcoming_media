@@ -1,8 +1,8 @@
 """
 Home Assistant component to feed the Upcoming Media Lovelace card with
-Emby Latest Media.
+Jellyfin Latest Media.
 
-https://github.com/gcorgnet/sensor.emby_upcoming_media
+https://github.com/jwillaz/sensor.jellyfin_upcoming_media
 
 https://github.com/custom-cards/upcoming-media-card
 
@@ -23,13 +23,13 @@ from homeassistant.components import sensor
 from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONF_SSL
 from homeassistant.helpers.entity import Entity
 
-from .client import EmbyClient
+from .client import JellyfinClient
 
 __version__ = "0.0.1"
 
-DOMAIN = "emby_upcoming_media"
+DOMAIN = "jellyfin_upcoming_media"
 DOMAIN_DATA = f"{DOMAIN}_data"
-ATTRIBUTION = "Data is provided by Emby."
+ATTRIBUTION = "Data is provided by Jellyfin."
 
 DICT_LIBRARY_TYPES = {"tvshows": "TV Shows", "movies": "Movies", "music": "Music"}
 
@@ -91,7 +91,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     show_episodes = config.get(CONF_EPISODES)
 
     # Configure the client.
-    client = EmbyClient(host, api_key, ssl, port, max_items, user_id, show_episodes)
+    client = JellyfinClient(host, api_key, ssl, port, max_items, user_id, show_episodes)
     hass.data[DOMAIN_DATA]["client"] = client
 
     categories = client.get_view_categories()
@@ -106,7 +106,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         categories = [{k:(v if k!='Id' else list(set([x['Id'] for x in i]))) for k,v in i[0].items()} for i in l]
 
     mapped = map(
-        lambda cat: EmbyUpcomingMediaSensor(
+        lambda cat: JellyfinUpcomingMediaSensor(
             hass, {**config, CATEGORY_NAME: cat["Name"], CATEGORY_ID: cat["Id"], CATEGORY_TYPE: DICT_LIBRARY_TYPES[cat["CollectionType"]]}
         ),
         categories,
@@ -118,7 +118,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL_SECONDS)
 
 
-class EmbyUpcomingMediaSensor(Entity):
+class JellyfinUpcomingMediaSensor(Entity):
     def __init__(self, hass, conf):
         self._client = hass.data[DOMAIN_DATA]["client"]
         self._state = None
@@ -126,16 +126,16 @@ class EmbyUpcomingMediaSensor(Entity):
         self.use_backdrop = conf.get(CONF_USE_BACKDROP)
         self.category_name = (conf.get(CATEGORY_TYPE) if conf.get(CONF_GROUP_LIBRARIES) == True else conf.get(CATEGORY_NAME))
         self.category_id = conf.get(CATEGORY_ID)
-        self.friendly_name = "Emby Latest Media " + self.category_name
+        self.friendly_name = "Jellyfin Latest Media " + self.category_name
         self.entity_id = sensor.ENTITY_ID_FORMAT.format(
-            "emby_latest_"
+            "jellyfin_latest_"
             + re.sub(r"\_$", "", re.sub(r"\W+", "_", self.category_name)
             ).lower()  # remove special characters
         )
 
     @property
     def name(self):
-        return "Latest {0} on Emby".format(self.category_name)
+        return "Latest {0} on Jellyfin".format(self.category_name)
 
     @property
     def state(self):

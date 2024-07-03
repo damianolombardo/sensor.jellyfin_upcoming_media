@@ -1,0 +1,11 @@
+{
+  "domain": "jellyfin_upcoming_media",
+  "name": "Jellyfin Latest Media",
+  "documentation": "https://github.com/jwillaz/sensor.jellyfin_upcoming_media",
+  "dependencies": [],
+  "codeowners": [
+    "@jwillaz"
+  ],
+  "requirements": ["python-dateutil"],
+  "version": "0.4"
+}
