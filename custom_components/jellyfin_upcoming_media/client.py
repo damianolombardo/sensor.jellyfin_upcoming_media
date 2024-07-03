@@ -23,7 +23,7 @@ class JellyfinClient:
     def get_view_categories(self):
         """This will pull the list of all View Categories on Jellyfin"""
         try:
-            url = "http{0}://{1}:{2}/Users/{3}/UserViews?api_key={4}".format(
+            url = "http{0}://{1}:{2}/UserViews?userId={3}&api_key={4}".format(
                 self.ssl, self.host, self.port, self.user_id, self.api_key
             )
             _LOGGER.info("Making API call on URL %s", url)
