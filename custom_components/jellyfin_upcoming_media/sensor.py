@@ -141,6 +141,11 @@ class JellyfinUpcomingMediaSensor(Entity):
     def state(self):
         return self._state
 
+    def _create_deep_link(self, item_id):
+        """Create a deep link to the Jellyfin item."""
+        base_url = self._client.get_base_url()
+        return f"{base_url}/web/index.html#!/details?id={item_id}"
+
     def handle_tv_episodes(self):
         """Return the state attributes."""
 
@@ -159,13 +164,15 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["airdate"] = show.get("PremiereDate", datetime.now().isoformat())
 
             if "PremiereDate" in show:
-                card_item["release"] = dateutil.parser.isoparse(show.get("PremiereDate", "")).year
+                date = dateutil.parser.isoparse(show.get("PremiereDate", ""))
+                card_item["release"] = f"Released {date.date()}"
+
             else:
                 card_item["release"] = ""
 
             if "RunTimeTicks" in show:
                 timeobject = timedelta(microseconds=show["RunTimeTicks"] / 10)
-                card_item["runtime"] = timeobject.total_seconds() / 60
+                card_item["runtime"] = int(timeobject.total_seconds() / 60)
             else:
                 card_item["runtime"] = ""
 
@@ -180,12 +187,17 @@ class JellyfinUpcomingMediaSensor(Entity):
 
             if "ParentBackdropItemId" in show:
                 card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
-                    show["ParentBackdropItemId"], "Backdrop" if self.use_backdrop else "Primary"
+                    show["ParentBackdropItemId"],  "Primary"
                 )
 
+            card_item['deep_link']=self._create_deep_link(show["Id"])
+            card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
+                    show["Id"], "Backdrop"
+                )
+            card_item['trailer']=''
             card_json.append(card_item)
 
-        attributes["data"] = json.dumps(card_json)
+        attributes["data"] = card_json
         attributes["attribution"] = ATTRIBUTION
 
         return attributes
@@ -206,7 +218,8 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["airdate"] = show.get("PremiereDate", datetime.now().isoformat())
 
             if "PremiereDate" in show:
-                card_item["release"] = dateutil.parser.isoparse(show.get("PremiereDate", "")).year
+                date = dateutil.parser.isoparse(show.get("PremiereDate", ""))
+                card_item["release"] = f"Released {date.date()}"
 
             if show["ChildCount"] > 1:
                 card_item['number'] = "{0} seasons".format(
@@ -219,12 +232,12 @@ class JellyfinUpcomingMediaSensor(Entity):
 
             if "RunTimeTicks" in show:
                 timeobject = timedelta(microseconds=show["RunTimeTicks"] / 10)
-                card_item["runtime"] = timeobject.total_seconds() / 60
+                card_item["runtime"] = int(timeobject.total_seconds() / 60)
             else:
                 card_item["runtime"] = ""
 
             if "Genres" in show:
-                card_item["genres"] = ", ".join(show["Genres"][:3])
+                card_item["genres"] = show["Genres"]
 
             if "ParentIndexNumber" and "IndexNumber" in show:
                 card_item["number"] = "S{:02d}E{:02d}".format(
@@ -238,12 +251,17 @@ class JellyfinUpcomingMediaSensor(Entity):
                 )
 
             card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
-                show["Id"], "Backdrop" if self.use_backdrop else "Primary"
+                show["Id"],  "Primary"
                 )
 
+            card_item['deep_link']=self._create_deep_link(show["Id"])
+            card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
+                    show["Id"], "Backdrop"
+                )
+            card_item['trailer']=''
             card_json.append(card_item)
 
-        attributes["data"] = json.dumps(card_json)
+        attributes["data"] = card_json
         attributes["attribution"] = ATTRIBUTION
 
         return attributes
@@ -264,16 +282,17 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["airdate"] = show.get("PremiereDate", datetime.now().isoformat())
 
             if "PremiereDate" in show:
-                card_item["release"] = dateutil.parser.isoparse(show.get("PremiereDate", "")).year
+                date = dateutil.parser.isoparse(show.get("PremiereDate", ""))
+                card_item["release"] = f"Released {date.date()}"
 
             if "RunTimeTicks" in show:
                 timeobject = timedelta(microseconds=show["RunTimeTicks"] / 10)
-                card_item["runtime"] = timeobject.total_seconds() / 60
+                card_item["runtime"] = int(timeobject.total_seconds() / 60)
             else:
                 card_item["runtime"] = ""
 
             if "Genres" in show:
-                card_item["genres"] = ", ".join(show["Genres"][:3])
+                card_item["genres"] = show["Genres"]
 
             if "Studios" in show and len(show["Studios"]) > 0:
                 card_item["studio"] = show["Studios"][0]["Name"]
@@ -285,12 +304,17 @@ class JellyfinUpcomingMediaSensor(Entity):
                 )
 
             card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
-                show["Id"], "Backdrop" if self.use_backdrop else "Primary"
+                show["Id"],  "Primary"
             )
 
+            card_item['deep_link']=self._create_deep_link(show["Id"])
+            card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
+                    show["Id"], "Backdrop"
+                )
+            card_item['trailer']=''
             card_json.append(card_item)
 
-        attributes["data"] = json.dumps(card_json)
+        attributes["data"] = card_json
         attributes["attribution"] = ATTRIBUTION
 
         return attributes
@@ -315,14 +339,14 @@ class JellyfinUpcomingMediaSensor(Entity):
 
             if "RunTimeTicks" in show:
                 timeobject = timedelta(microseconds=show["RunTimeTicks"] / 10)
-                card_item["runtime"] = timeobject.total_seconds() / 60
+                card_item["runtime"] = int(timeobject.total_seconds() / 60)
             else:
                 card_item["runtime"] = ""
 
             if "Genres" in show:
-                card_item["genres"] = ", ".join(show["Genres"][:3])
+                card_item["genres"] = show["Genres"]
 
-            card_item["release"] = show.get("ProductionYear", "")
+            card_item["release"] = f'Released: {show.get("ProductionYear", "")}'
             
             if "ParentIndexNumber" in show and "IndexNumber" in show:
                 card_item["number"] = "S{:02d}E{:02d}".format(
@@ -341,9 +365,14 @@ class JellyfinUpcomingMediaSensor(Entity):
                 show["Id"], "Primary"
             )
 
+            card_item['deep_link']=self._create_deep_link(show["Id"])
+            card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
+                    show["Id"], "Backdrop"
+                )
+            card_item['trailer']=''
             card_json.append(card_item)
 
-        attributes["data"] = json.dumps(card_json)
+        attributes["data"] = card_json
         attributes["attribution"] = ATTRIBUTION
 
         return attributes
@@ -380,11 +409,11 @@ class JellyfinUpcomingMediaSensor(Entity):
                 card_item["officialrating"] = show.get("OfficialRating", "")
 
                 if "Genres" in show:
-                    card_item["genres"] = ", ".join(show["Genres"][:3])
+                    card_item["genres"] = show["Genres"]
 
                 if "RunTimeTicks" in show:
                     timeobject = timedelta(microseconds=show["RunTimeTicks"] / 10)
-                    card_item["runtime"] = timeobject.total_seconds() / 60
+                    card_item["runtime"] = int(timeobject.total_seconds() / 60)
                 else:
                     card_item["runtime"] = ""
 
@@ -406,10 +435,14 @@ class JellyfinUpcomingMediaSensor(Entity):
                     "\u2605",  # Star character
                     show.get("CommunityRating", ""),
                 )
+                card_item['deep_link']=self._create_deep_link(show["Id"])
+                card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
+                    show["Id"], "Backdrop"
+                )
+                card_item['trailer']=''
+                card_json.append(card_item) 
 
-                card_json.append(card_item)
-
-            attributes["data"] = json.dumps(card_json)
+            attributes["data"] = card_json
             attributes["attribution"] = ATTRIBUTION
 
         return attributes

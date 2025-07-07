@@ -78,3 +78,7 @@ class JellyfinClient:
         )
         return url
             
+    def get_base_url(self):
+        """Return the base URL for the Jellyfin server."""
+        protocol = "https" if self.ssl else "http"
+        return f"{protocol}://{self.host}:{self.port}"
