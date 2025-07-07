@@ -2,7 +2,7 @@
 Home Assistant component to feed the Upcoming Media Lovelace card with
 Jellyfin Latest Media.
 
-https://github.com/jwillaz/sensor.jellyfin_upcoming_media
+https://github.com/damianolombardo/sensor.jellyfin_upcoming_media
 
 https://github.com/custom-cards/upcoming-media-card
 
@@ -25,7 +25,7 @@ from homeassistant.helpers.entity import Entity
 
 from .client import JellyfinClient
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 DOMAIN = "jellyfin_upcoming_media"
 DOMAIN_DATA = f"{DOMAIN}_data"
