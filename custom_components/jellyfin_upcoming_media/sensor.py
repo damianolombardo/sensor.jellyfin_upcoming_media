@@ -7,6 +7,7 @@ https://github.com/damianolombardo/sensor.jellyfin_upcoming_media
 https://github.com/custom-cards/upcoming-media-card
 
 """
+import os
 import logging
 import json
 import time
@@ -51,11 +52,46 @@ CATEGORY_TYPE = "CollectionType"
 
 SCAN_INTERVAL_SECONDS = 3600  # Scan once per hour
 
-TV_DEFAULT = {"title_default": "$title", "line1_default": "$release", "line2_default": "$number", "line3_default": "$episode", "line4_default": "Runtime: $runtime", "icon": "mdi:arrow-down-bold"}
-TV_ALTERNATE = {"title_default": "$title", "line1_default": "$release • $number", "line2_default": "Average Runtime: $runtime", "line3_default": "$genres", "line4_default": "$rating", "icon": "mdi:arrow-down-bold"}
-MOVIE_DEFAULT = {"title_default": "$title", "line1_default": "$release", "line2_default": "Runtime: $runtime", "line3_default": "$genres", "line4_default": "$rating", "icon": "mdi:arrow-down-bold"}
-MUSIC_DEFAULT = {"title_default": "$title", "line1_default": "$studio • $release", "line2_default": "Runtime: $runtime", "line3_default": "$genres", "line4_default": "", "icon": "mdi:arrow-down-bold"}
-OTHER_DEFAULT = {"title_default": "$title", "line1_default": "$release", "line2_default": "Runtime: $runtime", "line3_default": "$genres", "line4_default": "$studio", "icon": "mdi:arrow-down-bold"}
+TV_DEFAULT = {
+    "title_default": "$title", 
+    "line1_default": "$release", 
+    "line2_default": "$number", 
+    "line3_default": "$episode", 
+    "line4_default": "Runtime: $runtime", 
+    "icon": "mdi:arrow-down-bold"
+    }
+TV_ALTERNATE = {
+    "title_default": "$title", 
+    "line1_default": "$release • $number", 
+    "line2_default": "Average Runtime: $runtime", 
+    "line3_default": "$genres", 
+    "line4_default": "$rating • $studio",  
+    "icon": "mdi:arrow-down-bold"
+    }
+MOVIE_DEFAULT = {
+    "title_default": "$title", 
+    "line1_default": "$release", 
+    "line2_default": "Runtime: $runtime",
+    "line3_default": "$genres", 
+    "line4_default": "$rating • $studio",  
+    "icon": "mdi:arrow-down-bold"
+    }
+MUSIC_DEFAULT = {
+    "title_default": "$title", 
+    "line1_default": "$studio • $release", 
+    "line2_default": "Runtime: $runtime",
+    "line3_default": "$genres", 
+    "line4_default": "", 
+    "icon": "mdi:arrow-down-bold"
+    }
+OTHER_DEFAULT = {
+    "title_default": "$title", 
+    "line1_default": "$release", 
+    "line2_default": "Runtime: $runtime", 
+    "line3_default": "$genres", 
+    "line4_default": "$rating • $studio",  
+    "icon": "mdi:arrow-down-bold"
+    }
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -132,6 +168,7 @@ class JellyfinUpcomingMediaSensor(Entity):
             + re.sub(r"\_$", "", re.sub(r"\W+", "_", self.category_name)
             ).lower()  # remove special characters
         )
+        self.base_dir = hass.config.config_dir
 
     @property
     def name(self):
@@ -189,12 +226,26 @@ class JellyfinUpcomingMediaSensor(Entity):
                 card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["ParentBackdropItemId"],  "Primary"
                 )
+                card_item["poster"] = self.make_local_image(
+                    card_item["poster"], 
+                    f'poster_episode_{len(card_json)}.{"jpg"}'
+                    )
 
             card_item['deep_link']=self._create_deep_link(show["Id"])
             card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Backdrop"
                 )
-            card_item['trailer']=''
+            card_item['fanart'] = self.make_local_image(
+                card_item['fanart'], 
+                f'fanart_episode_{len(card_json)}.{"jpg"}'
+                )
+
+
+            trailers = show.get("RemoteTrailers", [])
+            if len(trailers)==0:
+                trailers.append({})
+            card_item['trailer']=trailers[0].get("Url", '')
+            card_item['summary']=show.get("Overview", '')
             card_json.append(card_item)
 
         attributes["data"] = card_json
@@ -253,12 +304,27 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                 show["Id"],  "Primary"
                 )
+            card_item["poster"] = self.make_local_image(
+                card_item["poster"], 
+                f'poster_show_{len(card_json)}.{"jpg"}'
+                )
 
             card_item['deep_link']=self._create_deep_link(show["Id"])
+
             card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Backdrop"
                 )
-            card_item['trailer']=''
+
+            card_item['fanart'] = self.make_local_image(
+                card_item['fanart'], 
+                f'fanart_show_{len(card_json)}.{"jpg"}'
+                )
+
+            trailers = show.get("RemoteTrailers", [])
+            if len(trailers)==0:
+                trailers.append({})
+            card_item['trailer']=trailers[0].get("Url", '')
+            card_item['summary']=show.get("Overview", '')
             card_json.append(card_item)
 
         attributes["data"] = card_json
@@ -306,12 +372,25 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                 show["Id"],  "Primary"
             )
+            card_item["poster"] = self.make_local_image(
+                card_item["poster"], 
+                f'poster_movie_{len(card_json)}.{"jpg"}'
+                )
 
             card_item['deep_link']=self._create_deep_link(show["Id"])
             card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Backdrop"
                 )
-            card_item['trailer']=''
+            card_item['fanart'] = self.make_local_image(
+                card_item['fanart'], 
+                f'fanart_movie_{len(card_json)}.{"jpg"}'
+                )
+
+            trailers = show.get("RemoteTrailers", [])
+            if len(trailers)==0:
+                trailers.append({})
+            card_item['trailer']=trailers[0].get("Url", '')
+            card_item['summary']=show.get("Overview", '')
             card_json.append(card_item)
 
         attributes["data"] = card_json
@@ -364,12 +443,24 @@ class JellyfinUpcomingMediaSensor(Entity):
             card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                 show["Id"], "Primary"
             )
+            card_item["poster"] = self.make_local_image(
+                card_item["poster"], 
+                f'poster_music_{len(card_json)}.{"jpg"}'
+                )
 
             card_item['deep_link']=self._create_deep_link(show["Id"])
             card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Backdrop"
                 )
-            card_item['trailer']=''
+            card_item['fanart'] = self.make_local_image(
+                card_item['fanart'], 
+                f'fanart_music_{len(card_json)}.{"jpg"}'
+                )
+            trailers = show.get("RemoteTrailers", [])
+            if len(trailers)==0:
+                trailers.append({})
+            card_item['trailer']=trailers[0].get("Url", '')
+            card_item['summary']=show.get("Overview", '')
             card_json.append(card_item)
 
         attributes["data"] = card_json
@@ -430,6 +521,10 @@ class JellyfinUpcomingMediaSensor(Entity):
                 card_item["poster"] = self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Primary"
                 )
+                card_item["poster"] = self.make_local_image(
+                    card_item["poster"], 
+                    f'poster_other_{len(card_json)}.{"jpg"}'
+                )
 
                 card_item["rating"] = "%s %s" % (
                     "\u2605",  # Star character
@@ -439,7 +534,16 @@ class JellyfinUpcomingMediaSensor(Entity):
                 card_item['fanart']=self.hass.data[DOMAIN_DATA]["client"].get_image_url(
                     show["Id"], "Backdrop"
                 )
-                card_item['trailer']=''
+                card_item['fanart'] = self.make_local_image(
+                    card_item['fanart'], 
+                    f'fanart_other_{len(card_json)}.{"jpg"}'
+                )
+
+                trailers = show.get("RemoteTrailers", [])
+                if len(trailers)==0:
+                    trailers.append({})
+                card_item['trailer']=trailers[0].get("Url", '')
+                card_item['summary']=show.get("Overview", '')
                 card_json.append(card_item) 
 
             attributes["data"] = card_json
@@ -463,3 +567,37 @@ class JellyfinUpcomingMediaSensor(Entity):
         else:
             self._state = "error"
             _LOGGER.error("ERROR")
+
+    def store_image_bytes(self, image_bytes: bytes, filename: str):
+        """Store image bytes in the www/community folder."""
+        
+        # Create the full path to www/community
+        www_community_dir = os.path.join(self.base_dir, "www", "community", "jellyfin_upcoming_media")
+        
+        # Ensure the directory exists
+        os.makedirs(www_community_dir, exist_ok=True)
+        
+        # Full file path
+        file_path = os.path.join(www_community_dir, filename)
+        
+        try:
+            # Write the image bytes to file
+            with open(file_path, 'wb') as f:
+                f.write(image_bytes)
+            
+            _LOGGER.info(f"Image saved successfully to {file_path}")
+            
+            # Return the URL path for accessing the image
+            return f"/local/community/jellyfin_upcoming_media/{filename}"
+            
+        except Exception as e:
+            _LOGGER.error(f"Failed to save image to {file_path}: {e}")
+            return None
+    
+    def make_local_image(self, url:str, filename:str):
+        try:
+            b = self.hass.data[DOMAIN_DATA]["client"].get_image_bytes(url)
+        except Exception as e:
+            _LOGGER.error(f"Failed to fetch image from {url}: {e}")
+            return url
+        return self.store_image_bytes(b, filename)

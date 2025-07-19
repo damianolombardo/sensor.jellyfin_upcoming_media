@@ -23,9 +23,7 @@ class JellyfinClient:
     def get_view_categories(self):
         """This will pull the list of all View Categories on Jellyfin"""
         try:
-            url = "http{0}://{1}:{2}/UserViews?userId={3}&api_key={4}".format(
-                self.ssl, self.host, self.port, self.user_id, self.api_key
-            )
+            url = f"http{self.ssl}://{self.host}:{self.port}/UserViews?userId={self.user_id}&api_key={self.api_key}"
             _LOGGER.info("Making API call on URL %s", url)
             api = requests.get(url, timeout=10)
         except OSError:
@@ -43,17 +41,9 @@ class JellyfinClient:
         return self.data["ViewCategories"]
 
     def get_data(self, categoryId):
+        fields = 'ProviderIds,Overview,RemoteTrailers,CommunityRating,Studios,PremiereDate,Genres,ChildCount,ProductionYear,DateCreated'
         try:
-            url = "http{0}://{1}:{2}/Users/{3}/Items/Latest?Limit={4}&Fields=CommunityRating,Studios,PremiereDate,Genres,ChildCount,ProductionYear,DateCreated&ParentId={5}&api_key={6}{7}".format(
-                self.ssl,
-                self.host,
-                self.port,
-                self.user_id,
-                self.max_items,
-                categoryId,
-                self.api_key,
-                self.show_episodes,
-            )
+            url = f"http{self.ssl}://{self.host}:{self.port}/Users/{self.user_id}/Items/Latest?Limit={self.max_items}&Fields={fields}&ParentId={categoryId}&api_key={self.api_key}{self.show_episodes}"
             _LOGGER.info("Making API call on URL %s", url)
             api = requests.get(url, timeout=10)
         except OSError:
@@ -73,12 +63,23 @@ class JellyfinClient:
         return self.data[categoryId]
 
     def get_image_url(self, itemId, imageType):
-        url = "http{0}://{1}:{2}/Items/{3}/Images/{4}?maxHeight=360&maxWidth=640&quality=90".format(
-            self.ssl, self.host, self.port, itemId, imageType
-        )
+        url = f"http{self.ssl}://{self.host}:{self.port}/Items/{itemId}/Images/{imageType}?maxHeight=360&maxWidth=640&quality=90&userId={self.user_id}&api_key={self.api_key}"
         return url
             
     def get_base_url(self):
         """Return the base URL for the Jellyfin server."""
         protocol = "https" if self.ssl else "http"
         return f"{protocol}://{self.host}:{self.port}"
+
+    def get_image_bytes(self, url):
+        """Return the bytes of an image at a URL"""
+        response = requests.get(url, timeout=10)
+        try:
+            response.raise_for_status()
+            return response.content
+        except Exception as e:
+            _LOGGER.error(f"Failed to open image url {url}: {e}")
+            return b''
+
+    def get_tvdb_images(tvdbid):
+        return  [f"https://artworks.thetvdb.com/banners/movies/{tvdbid}/{t}s/{tvdbid}.jpg" for t in ['poster', 'background']]
