@@ -2,6 +2,7 @@
 import datetime
 import requests
 import logging
+from io import BytesIO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class JellyfinClient:
         return self.data["ViewCategories"]
 
     def get_data(self, categoryId):
-        fields = 'ProviderIds,Overview,RemoteTrailers,CommunityRating,Studios,PremiereDate,Genres,ChildCount,ProductionYear,DateCreated'
+        fields = 'ParentId,ProviderIds,Overview,RemoteTrailers,CommunityRating,Studios,PremiereDate,Genres,ChildCount,ProductionYear,DateCreated'
         try:
             url = f"http{self.ssl}://{self.host}:{self.port}/Users/{self.user_id}/Items/Latest?Limit={self.max_items}&Fields={fields}&ParentId={categoryId}&api_key={self.api_key}{self.show_episodes}"
             _LOGGER.info("Making API call on URL %s", url)
@@ -53,12 +54,30 @@ class JellyfinClient:
 
         if api.status_code == 200:
             self._state = "Online"
-            self.data[categoryId] = api.json()[: self.max_items]
+            category_data = api.json()[: self.max_items]
 
         else:
             _LOGGER.info("Could not reach url %s", url)
             self._state = "%s cannot be reached" % self.host
             return
+
+        # load the images as local assets
+        image_types = ['Primary', 'Backdrop', 'Banner', 'Logo', 'Thumb']
+        for item in category_data:
+            itemId = item.get('Id')
+            if itemId:
+                for imageType in image_types:
+                    image_url = self.get_image_url(itemId, imageType)
+                    image_bytes = self.get_image_bytes(image_url)
+                    item[f'{imageType}_bytes'] = BytesIO(image_bytes)
+            ParentId = item.get('ParentId', None)
+            if ParentId:
+                for imageType in image_types:
+                    image_url = self.get_image_url(ParentId, imageType)
+                    image_bytes = self.get_image_bytes(image_url)
+                    item[f'{imageType}_parent_bytes'] = BytesIO(image_bytes)
+
+        self.data[categoryId] = category_data
 
         return self.data[categoryId]
 
@@ -74,12 +93,15 @@ class JellyfinClient:
     def get_image_bytes(self, url):
         """Return the bytes of an image at a URL"""
         response = requests.get(url, timeout=10)
-        try:
-            response.raise_for_status()
+        if response.status_code == 200:
             return response.content
-        except Exception as e:
-            _LOGGER.error(f"Failed to open image url {url}: {e}")
-            return b''
+        elif response.status_code == 404:
+            _LOGGER.warning("Image not found at URL: %s", url)
+        elif response.status_code == 403:
+            _LOGGER.warning("Access forbidden to image at URL: %s", url)
+        else:
+            _LOGGER.error("Error fetching image at URL %s: %s", url, response.status_code)
+        return b''
 
-    def get_tvdb_images(tvdbid):
-        return  [f"https://artworks.thetvdb.com/banners/movies/{tvdbid}/{t}s/{tvdbid}.jpg" for t in ['poster', 'background']]
+    def get_tvdb_images(self, tvdbid, img_type: str, media_type: str):
+        return  f"https://artworks.thetvdb.com/banners/{media_type}/{tvdbid}/{img_type}s/{tvdbid}.jpg"
