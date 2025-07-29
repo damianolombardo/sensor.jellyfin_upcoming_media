@@ -64,14 +64,13 @@ class JellyfinClient:
         # load the images as local assets
         image_types = ['Primary', 'Backdrop', 'Banner', 'Logo', 'Thumb']
         for item in category_data:
-            itemId = item.get('Id')
-            if itemId:
+            if itemId := item.get('Id', None):
                 for imageType in image_types:
                     image_url = self.get_image_url(itemId, imageType)
                     image_bytes = self.get_image_bytes(image_url)
                     item[f'{imageType}_bytes'] = BytesIO(image_bytes)
-            ParentId = item.get('ParentId', None)
-            if ParentId:
+            
+            if ParentId := item.get('ParentId', None):
                 for imageType in image_types:
                     image_url = self.get_image_url(ParentId, imageType)
                     image_bytes = self.get_image_bytes(image_url)

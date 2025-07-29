@@ -196,8 +196,8 @@ class JellyfinUpcomingMediaSensor(Entity):
         for show in self.data:
 
             card_item = {}
-            card_item["title"] = show["SeriesName"]
-            card_item['episode'] = show.get('Name', '')
+            card_item["title"] = show.get("SeriesName",show.get("Name",""))
+            card_item['episode'] = show.get('Name', '') if show.get("SeriesName") else ""
 
             card_item["airdate"] = show.get("PremiereDate", datetime.now().isoformat())
 
@@ -607,9 +607,13 @@ class JellyfinUpcomingMediaSensor(Entity):
             return self.store_image_bytes(
                 img_bytes, 
                 f'{upcoming_image_type}_{library_type}_{sequence_number}.{"jpg"}'
-            )
+            )+f"?id={show.get('Id')}"
         else:
+            self.store_image_bytes(
+                b'', 
+                f'{upcoming_image_type}_{library_type}_{sequence_number}.{"jpg"}'
+            )
             return self.hass.data[DOMAIN_DATA]["client"].get_tvdb_images(
-                show.get("ProviderIds", {}).get('Tvdb',''), tvdb_image_type
+                show.get("ProviderIds", {}).get('Tvdb',''), tvdb_image_type, library_type
             )
 
